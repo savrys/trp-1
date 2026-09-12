@@ -1,20 +1,17 @@
 import datetime
 
-
 def get_bike_type() -> str:
     """Запрашивает у пользователя тип велосипеда."""
     print("Доступные типы велосипедов:")
-    print("  1 — городской (200 руб/час)")
-    print("  2 — горный    (300 руб/час)")
-    print("  3 — детский   (150 руб/час)")
+    print("  1 - городской (200 руб/час)")
+    print("  2 - горный    (300 руб/час)")
+    print("  3 - детский   (150 руб/час)")
     return input("Введите тип велосипеда (1/2/3): ").strip()
-
 
 def get_hours() -> int:
     """Запрашивает количество часов аренды."""
     raw = input("На сколько часов арендуете велосипед? ").strip()
     return int(raw)
-
 
 def get_bike_price(bike_type: str) -> int:
     """Возвращает цену за час в зависимости от типа велосипеда."""
@@ -27,7 +24,6 @@ def get_bike_price(bike_type: str) -> int:
     else:
         return 0
 
-
 def get_bike_name(bike_type: str) -> str:
     """Возвращает название типа велосипеда."""
     if bike_type == "1":
@@ -39,16 +35,14 @@ def get_bike_name(bike_type: str) -> str:
     else:
         return "неизвестный"
 
-
 def calculate_discount(hours: int) -> float:
-    """Скидка: 10% при аренде от 5 часов, 20% — от 10 часов."""
+    """Скидка: 10% при аренде от 5 часов, 20% - от 10 часов."""
     if hours >= 10:
         return 0.20
     elif hours >= 5:
         return 0.10
     else:
         return 0.0
-
 
 def main() -> None:
     print("   Аренда велосипедов")
@@ -88,7 +82,6 @@ def main() -> None:
         print(f"Скидка:            {int(discount * 100)}% ({discount_sum:.0f} руб.)")
     print(f"ИТОГО к оплате:    {total:.0f} руб.")
     print("Аренда успешно оформлена. Хорошей поездки!")
-
 
 if __name__ == "__main__":
     main()
