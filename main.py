@@ -1,7 +1,6 @@
 import datetime
 
 def get_bike_type() -> str:
-    """Запрашивает у пользователя тип велосипеда."""
     print("Доступные типы велосипедов:")
     print("  1 - городской (200 руб/час)")
     print("  2 - горный    (300 руб/час)")
@@ -9,12 +8,10 @@ def get_bike_type() -> str:
     return input("Введите тип велосипеда (1/2/3): ").strip()
 
 def get_hours() -> int:
-    """Запрашивает количество часов аренды."""
     raw = input("На сколько часов арендуете велосипед? ").strip()
     return int(raw)
 
 def get_bike_price(bike_type: str) -> int:
-    """Возвращает цену за час в зависимости от типа велосипеда."""
     if bike_type == "1":
         return 200
     elif bike_type == "2":
@@ -25,7 +22,6 @@ def get_bike_price(bike_type: str) -> int:
         return 0
 
 def get_bike_name(bike_type: str) -> str:
-    """Возвращает название типа велосипеда."""
     if bike_type == "1":
         return "городской"
     elif bike_type == "2":
@@ -36,7 +32,6 @@ def get_bike_name(bike_type: str) -> str:
         return "неизвестный"
 
 def calculate_discount(hours: int) -> float:
-    """Скидка: 10% при аренде от 5 часов, 20% - от 10 часов."""
     if hours >= 10:
         return 0.20
     elif hours >= 5:
