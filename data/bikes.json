@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "type": "2",
+    "name": "горный",
+    "price_per_hour": 300,
+    "station_id": 1,
+    "serial_number": "32553",
+    "status": "available"
+  }
+]
