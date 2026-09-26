@@ -1,8 +1,12 @@
 [
-  {
-    "id": 1,
-    "name": "sdgsdg",
-    "phone": "23423552",
-    "registration_date": "19.09.2026"
-  }
+    {
+        "id": 1,
+        "name": "Иван Иванов",
+        "email": "ivan@mail.ru"
+    },
+    {
+        "id": 2,
+        "name": "Мария Сидорова",
+        "email": "maria@yandex.ru"
+    }
 ]

@@ -42,4 +42,3 @@ def show_bikes(bikes: List[Bike]) -> None:
         return
     for bike in bikes:
         print(bike)
-

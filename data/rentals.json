@@ -1,16 +1,10 @@
 [
-  {
-    "id": 1,
-    "bike_id": 1,
-    "user_id": 1,
-    "station_id": 1,
-    "hours": 12,
-    "start_time": "19.09.2026 14:53",
-    "end_time": "20.09.2026 02:53",
-    "base_cost": 2400,
-    "discount": 0.2,
-    "discount_sum": 480.0,
-    "total": 1920.0,
-    "status": "completed"
-  }
+    {
+        "id": 1,
+        "bike_id": 3,
+        "user_id": 1,
+        "station_id": 1,
+        "start_time": "2026-09-26 14:00:00",
+        "is_completed": false
+    }
 ]

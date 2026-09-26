@@ -1,8 +1,12 @@
 [
-  {
-    "id": 1,
-    "name": "track",
-    "address": "dsgfhsds",
-    "capacity": 5
-  }
+    {
+        "id": 1,
+        "name": "Станция Парк Культуры",
+        "capacity": 15
+    },
+    {
+        "id": 2,
+        "name": "Станция Университет",
+        "capacity": 10
+    }
 ]

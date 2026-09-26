@@ -1,11 +1,20 @@
 [
-  {
-    "id": 1,
-    "type": "2",
-    "name": "горный",
-    "price_per_hour": 300,
-    "station_id": 1,
-    "serial_number": "32553",
-    "status": "available"
-  }
+    {
+        "id": 1,
+        "model": "Format 1411",
+        "type": "Mountain",
+        "is_available": true
+    },
+    {
+        "id": 2,
+        "model": "Shulz Trekker",
+        "type": "Touring",
+        "is_available": true
+    },
+    {
+        "id": 3,
+        "model": "Giant Escape",
+        "type": "Urban",
+        "is_available": false
+    }
 ]

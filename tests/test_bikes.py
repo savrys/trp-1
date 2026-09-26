@@ -1,50 +1,33 @@
-"""Тесты для модуля bikes."""
-
-from bikes import (
-    add_bike,
-    get_available_bikes,
-    get_bike_name,
-    get_bike_price,
-    sort_bikes_by_price,
-)
+from models import Bike, add_bike, find_bike
 
 
-def test_get_bike_price():
-    assert get_bike_price("1") == 200
-    assert get_bike_price("2") == 300
-    assert get_bike_price("3") == 150
-    assert get_bike_price("99") == 0
+def test_bike_object_creation():
+    bike = Bike(42, "Specialized Rockhopper", "Mountain")
+    assert bike.id == 42
+    assert bike.model == "Specialized Rockhopper"
+    assert bike.type == "Mountain"
+    assert bike.is_available is True
 
 
-def test_get_bike_name():
-    assert get_bike_name("1") == "городской"
-    assert get_bike_name("99") == "неизвестный"
+def test_bike_availability_toggle():
+    bike = Bike(1, "Fixie", "Urban")
+    bike.change_availability(False)
+    assert bike.is_available is False
 
 
-def test_add_bike():
-    bikes: list[dict] = []
-    bike = add_bike(bikes, "2", 1, "SN-001")
-    assert len(bikes) == 1
-    assert bike["name"] == "горный"
-    assert bike["status"] == "available"
-    assert bike["station_id"] == 1
+def test_add_bike_to_collection():
+    collection = []
+    added = add_bike(collection, 10, "Format 1411", "Cross-Country")
+    assert len(collection) == 1
+    assert collection[0] is added
+    assert collection[0].model == "Format 1411"
 
 
-def test_get_available_bikes():
-    bikes: list[dict] = []
-    add_bike(bikes, "1", 1, "SN-001")
-    add_bike(bikes, "2", 1, "SN-002")
-    bikes[1]["status"] = "rented"
-    available = get_available_bikes(bikes)
-    assert len(available) == 1
-    assert available[0]["id"] == 1
-
-
-def test_sort_bikes_by_price():
-    bikes: list[dict] = []
-    add_bike(bikes, "2", 1, "SN-001")  # 300
-    add_bike(bikes, "1", 1, "SN-002")  # 200
-    add_bike(bikes, "3", 1, "SN-003")  # 150
-    sorted_bikes = sort_bikes_by_price(bikes)
-    assert sorted_bikes[0]["price_per_hour"] == 150
-    assert sorted_bikes[-1]["price_per_hour"] == 300
+def test_find_bike_by_query():
+    bikes_list = [
+        Bike(1, "Shulz Trekker", "Touring"),
+        Bike(2, "Format 5512", "Gravel")
+    ]
+    results = find_bike(bikes_list, "shulz")
+    assert len(results) == 1
+    assert results[0].id == 1
