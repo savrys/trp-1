@@ -6,7 +6,7 @@ SECRET_KEY = 'django-insecure-local-development-key-for-pr5-testing'
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -92,4 +92,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

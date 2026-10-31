@@ -1,0 +1,46 @@
+
+{% extends "base.html" %}
+
+{% block title %}Аренда №{{ rental.id }} — Bikely{% endblock %}
+
+{% block content %}
+<div class="detail-wrap">
+    <a class="back-link" href="{% url 'web_rentals:list' %}">
+        ← Вернуться к списку аренд
+    </a>
+
+    <article class="detail-card">
+        <div class="detail-bike-icon">🧾</div>
+
+        <span class="eyebrow">ИНФОРМАЦИЯ ОБ АРЕНДЕ</span>
+
+        <h1>Аренда №{{ rental.id }}</h1>
+
+        <div class="detail-info">
+            <div>
+                <span>Велосипед</span>
+                <strong>{{ rental.bike.model }}</strong>
+            </div>
+
+            <div>
+                <span>Клиент</span>
+                <strong>{{ rental.user.name }}</strong>
+            </div>
+
+            <div>
+                <span>Станция</span>
+                <strong>{{ rental.station.name }}</strong>
+            </div>
+
+            <div>
+                <span>Время начала</span>
+                <strong>{{ rental.start_time }}</strong>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            {% include "web_rentals/includes/rental_status.html" with rental=rental %}
+        </div>
+    </article>
+</div>
+{% endblock %}

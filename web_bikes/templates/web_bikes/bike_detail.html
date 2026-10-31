@@ -1,0 +1,69 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+    {% if bike %}
+        {{ bike.model }} — Bikely
+    {% else %}
+        Велосипед не найден — Bikely
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if bike %}
+    <div class="detail-wrap">
+        <a class="back-link" href="{% url 'web_bikes:list' %}">
+            ← Вернуться к каталогу
+        </a>
+
+        <article class="detail-card">
+            <div class="detail-bike-icon">🚲</div>
+
+            <span class="eyebrow">
+                ВЕЛОСИПЕД №{{ bike.id }}
+            </span>
+
+            <h1>{{ bike.model }}</h1>
+
+            <p class="detail-type">
+                {{ bike.type|default:"Тип не указан" }}
+            </p>
+
+            <div class="detail-info">
+                <div>
+                    <span>Идентификатор</span>
+                    <strong>{{ bike.id }}</strong>
+                </div>
+
+                <div>
+                    <span>Текущий статус</span>
+
+                    {% if bike.is_available %}
+                        <strong class="text-success">
+                            Свободен для выдачи
+                        </strong>
+                    {% else %}
+                        <strong class="text-danger">
+                            Находится на руках у клиента
+                        </strong>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+    </div>
+{% else %}
+    <div class="not-found">
+        <div class="not-found-icon">?</div>
+
+        <h1>Велосипед не найден</h1>
+
+        <p>
+            Велосипеда с указанным идентификатором не существует.
+        </p>
+
+        <a href="{% url 'web_bikes:list' %}" class="btn btn-bikely">
+            Вернуться к каталогу
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

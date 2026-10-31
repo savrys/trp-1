@@ -1,0 +1,29 @@
+
+{% extends "base.html" %}
+
+{% block title %}Велосипеды — Bikely{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Наши велосипеды</h1>
+    <span class="badge bg-primary">
+        Всего: {{ bikes|length }}
+    </span>
+</div>
+
+{% if bikes %}
+    <div class="row g-4">
+        {% for bike in bikes %}
+            <div class="col-md-6 col-lg-4">
+                {% include "web_bikes/includes/bike_card.html" with bike=bike %}
+            </div>
+        {% empty %}
+            <p>Пока велосипеды не добавлены.</p>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Сейчас велосипеды отсутствуют.
+    </div>
+{% endif %}
+{% endblock %}

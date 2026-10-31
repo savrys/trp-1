@@ -1,0 +1,10 @@
+
+{% if rental.is_completed %}
+    <span class="status status-active">
+        Аренда завершена
+    </span>
+{% else %}
+    <span class="status status-muted">
+        Аренда активна
+    </span>
+{% endif %}

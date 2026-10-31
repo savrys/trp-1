@@ -1,0 +1,55 @@
+
+{% extends "base.html" %}
+
+{% block title %}Главная — Bikely{% endblock %}
+
+{% block content %}
+<section class="hero-section text-center py-5">
+    <div class="container">
+        <h1 class="display-4 fw-bold">Добро пожаловать в Bikely!</h1>
+
+        <p class="lead mt-3">
+            Удобный сервис аренды велосипедов для прогулок по городу.
+        </p>
+
+        <a href="{% url 'web_bikes:list' %}" class="btn btn-primary btn-lg mt-3">
+            Посмотреть велосипеды
+        </a>
+    </div>
+</section>
+
+<section class="row text-center g-4 mt-4">
+    <div class="col-md-4">
+        <div class="feature-card p-4 h-100">
+            <h3>🚲 Велосипеды</h3>
+            <p>Выбирай подходящий велосипед для своей поездки.</p>
+            <a href="{% url 'web_bikes:list' %}">Перейти к каталогу</a>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="feature-card p-4 h-100">
+            <h3>📍 Станции</h3>
+            <p>Находи удобные места получения велосипедов.</p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="feature-card p-4 h-100">
+            <h3>🧾 Аренда</h3>
+            <p>Просматривай информацию о поездках и арендах.</p>
+            <a href="{% url 'web_rentals:list' %}">Мои аренды</a>
+        </div>
+    </div>
+</section>
+
+<section class="mt-5 text-center">
+    <h2>Совет для поездки</h2>
+    <p id="rideAdvice" class="mt-3">
+        Не забудь проверить тормоза перед поездкой!
+    </p>
+    <button class="btn btn-outline-primary" id="adviceButton" type="button">
+        Другой совет
+    </button>
+</section>
+{% endblock %}
