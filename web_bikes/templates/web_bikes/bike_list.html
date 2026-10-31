@@ -7,9 +7,34 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Наши велосипеды</h1>
     <span class="badge bg-primary">
-        Всего: {{ bikes|length }}
+        Найдено: {{ bikes|length }}
     </span>
 </div>
+
+<!-- Форма поиска велосипедов -->
+<form method="get" action="{% url 'web_bikes:list' %}" class="mb-4">
+    <div class="input-group">
+        <input
+            type="text"
+            name="search"
+            class="form-control"
+            placeholder="Введите название модели велосипеда"
+            value="{{ search }}"
+        >
+        <button class="btn btn-primary" type="submit">
+            Найти
+        </button>
+        <a href="{% url 'web_bikes:list' %}" class="btn btn-outline-secondary">
+            Сбросить
+        </a>
+    </div>
+</form>
+
+{% if search %}
+    <p class="text-muted">
+        Результаты поиска по запросу: <strong>{{ search }}</strong>
+    </p>
+{% endif %}
 
 {% if bikes %}
     <div class="row g-4">
@@ -22,8 +47,14 @@
         {% endfor %}
     </div>
 {% else %}
-    <div class="alert alert-info">
-        Сейчас велосипеды отсутствуют.
-    </div>
+    {% if search %}
+        <div class="alert alert-warning">
+            По запросу «{{ search }}» велосипеды не найдены.
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Сейчас велосипеды отсутствуют.
+        </div>
+    {% endif %}
 {% endif %}
 {% endblock %}

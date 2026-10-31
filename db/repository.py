@@ -1,3 +1,4 @@
+
 from db.database import get_connection
 
 
@@ -36,6 +37,23 @@ def get_bike_by_id(bike_id):
             "SELECT * FROM bikes WHERE id = ?",
             (bike_id,),
         ).fetchone()
+    finally:
+        connection.close()
+
+
+def search_bikes(search):
+    """Найти велосипеды по названию модели."""
+    connection = get_connection()
+    try:
+        return connection.execute(
+            """
+            SELECT *
+            FROM bikes
+            WHERE model LIKE ?
+            ORDER BY id
+            """,
+            (f"%{search}%",),
+        ).fetchall()
     finally:
         connection.close()
 

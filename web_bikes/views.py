@@ -1,9 +1,11 @@
+
 from django.shortcuts import render
 
 from db.repository import (
     get_all_bikes,
     get_all_stations,
     get_bike_by_id,
+    search_bikes,
 )
 
 from models.bikes import Bike
@@ -24,10 +26,17 @@ def bike_from_row(row):
 
 
 def bikes_list_view(request):
-    """Страница со списком велосипедов и станций."""
+    """Страница со списком велосипедов, станций и поиском."""
+    search = request.GET.get("search", "").strip()
+
+    if search:
+        bike_rows = search_bikes(search)
+    else:
+        bike_rows = get_all_bikes()
+
     bikes = [
         bike_from_row(row)
-        for row in get_all_bikes()
+        for row in bike_rows
     ]
 
     stations = [
@@ -42,6 +51,7 @@ def bikes_list_view(request):
     context = {
         "bikes": bikes,
         "stations": stations,
+        "search": search,
     }
 
     return render(request, "web_bikes/bike_list.html", context)
