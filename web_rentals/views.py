@@ -1,12 +1,50 @@
-
 from django.shortcuts import render
 
-from storage import (
-    load_bikes,
-    load_users,
-    load_stations,
-    load_rentals,
-)
+from db.repository import get_rentals_for_views
+
+from models.bikes import Bike
+from models.users import User
+from models.stations import Station
+from models.rentals import Rental
+
+
+def get_all_rentals():
+    """Получить аренды из SQLite и создать связанные объекты."""
+    rows = get_rentals_for_views()
+    rentals = []
+
+    for row in rows:
+        bike = Bike(
+            bike_id=row["bike_id"],
+            model=row["bike_model"],
+            type_bike=row["bike_type"],
+            is_available=bool(row["bike_is_available"]),
+        )
+
+        user = User(
+            user_id=row["user_id"],
+            name=row["user_name"],
+            email=row["user_email"],
+        )
+
+        station = Station(
+            station_id=row["station_id"],
+            name=row["station_name"],
+            capacity=row["station_capacity"],
+        )
+
+        rental = Rental(
+            rental_id=row["rental_id"],
+            bike=bike,
+            user=user,
+            station=station,
+            start_time=row["start_time"],
+            is_completed=bool(row["is_completed"]),
+        )
+
+        rentals.append(rental)
+
+    return rentals
 
 
 def get_rental_by_id(rentals_list, rental_id):
@@ -17,43 +55,25 @@ def get_rental_by_id(rentals_list, rental_id):
     return None
 
 
-def get_all_rentals():
-    """Загрузить аренды вместе со связанными объектами."""
-    bikes = load_bikes("data/bikes.json")
-    users = load_users("data/users.json")
-    stations = load_stations("data/stations.json")
+def rentals_list_view(request):
+    """Страница со списком аренд."""
+    rentals = get_all_rentals()
 
-    return load_rentals(
-        "data/rentals.json",
-        bikes,
-        users,
-        stations,
+    return render(
+        request,
+        "web_rentals/rental_list.html",
+        {"rentals": rentals},
     )
 
 
-def rentals_list_view(request):
-    """Показать список всех аренд."""
-    rentals = get_all_rentals()
-
-    context = {
-        "rentals": rentals,
-    }
-
-    return render(request, "web_rentals/rental_list.html", context)
-
-
 def rental_detail_view(request, rental_id):
-    """Показать подробную информацию об аренде."""
+    """Страница с подробной информацией об аренде."""
     rentals = get_all_rentals()
     rental = get_rental_by_id(rentals, rental_id)
-
-    context = {
-        "rental": rental,
-    }
 
     return render(
         request,
         "web_rentals/rental_detail.html",
-        context,
+        {"rental": rental},
         status=404 if rental is None else 200,
     )
