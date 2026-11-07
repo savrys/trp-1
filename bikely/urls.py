@@ -7,3 +7,6 @@ urlpatterns = [
     path("bikes/", include("web_bikes.urls")),
     path("rentals/", include("web_rentals.urls")),
 ]
+
+# Кастомная страница ошибки 404 (используется при DEBUG = False).
+handler404 = "web_main.views.page_not_found"

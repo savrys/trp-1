@@ -33,3 +33,8 @@ def index(request):
         "web_main/index.html",
         {"stations": stations, "stats": stats},
     )
+
+
+def page_not_found(request, exception=None):
+    """Кастомная страница ошибки 404."""
+    return render(request, "404.html", status=404)

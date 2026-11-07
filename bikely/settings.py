@@ -29,6 +29,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Показывает кастомную страницу 404 и при DEBUG = True.
+    'bikely.middleware.Custom404Middleware',
 ]
 
 ROOT_URLCONF = 'bikely.urls'
