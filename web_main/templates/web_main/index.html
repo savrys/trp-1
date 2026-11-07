@@ -18,6 +18,40 @@
     </div>
 </section>
 
+<section class="row text-center g-3 mt-4">
+    <div class="col-6 col-md-3">
+        <div class="feature-card p-3 h-100">
+            <div class="fs-3 fw-bold">{{ stats.bikes_total }}</div>
+            <div class="text-muted">Велосипедов всего</div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <div class="feature-card p-3 h-100">
+            <div class="fs-3 fw-bold text-success">
+                {{ stats.bikes_available }}
+            </div>
+            <div class="text-muted">Свободных велосипедов</div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <div class="feature-card p-3 h-100">
+            <div class="fs-3 fw-bold">{{ stats.rentals_total }}</div>
+            <div class="text-muted">Аренд оформлено</div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <div class="feature-card p-3 h-100">
+            <div class="fs-3 fw-bold text-warning">
+                {{ stats.rentals_active }}
+            </div>
+            <div class="text-muted">Активных аренд</div>
+        </div>
+    </div>
+</section>
+
 <section class="row text-center g-4 mt-4">
 
     <!-- Велосипеды -->
@@ -42,10 +76,14 @@
                 <div class="mt-3">
                     {% for station in stations %}
                         <div class="border rounded-3 p-3 mb-2">
-                            <h5>{{ station.name|default:"Название станции указано"  }}</h5>
+                            <h5>{{ station.name|default:"Название не указано" }}</h5>
+
+                            <p class="mb-1 text-muted">
+                                Вместимость: {{ station.capacity }} велосипедов
+                            </p>
 
                             <p class="mb-0 text-muted">
-                                Вместимость: {{ station.capacity }} велосипедов
+                                Оформлено аренд: {{ station.rentals_count }}
                             </p>
                         </div>
                     {% endfor %}

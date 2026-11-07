@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика аренды — Bikely{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h1 class="mb-0">Статистика аренды</h1>
+
+    <a class="btn btn-outline-secondary" href="{% url 'web_rentals:list' %}">
+        К списку аренд
+    </a>
+</div>
+
+<!-- Сводные показатели (ORM aggregate) -->
+<div class="row g-3 mb-5">
+    <div class="col-md-4">
+        <div class="feature-card p-3 h-100 text-center">
+            <div class="fs-3 fw-bold">{{ summary.total }}</div>
+            <div class="text-muted">Всего аренд</div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="feature-card p-3 h-100 text-center">
+            <div class="fs-3 fw-bold text-warning">{{ summary.active }}</div>
+            <div class="text-muted">Активных аренд</div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="feature-card p-3 h-100 text-center">
+            <div class="fs-3 fw-bold text-success">{{ summary.completed }}</div>
+            <div class="text-muted">Завершённых аренд</div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="feature-card p-3 h-100 text-center">
+            <div class="fs-4 fw-bold">
+                {{ summary.average_capacity|floatformat:1 }}
+            </div>
+            <div class="text-muted">Средняя вместимость станции</div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="feature-card p-3 h-100 text-center">
+            <div class="fs-4 fw-bold">
+                {{ summary.last_start_time|date:"d.m.Y H:i"|default:"—" }}
+            </div>
+            <div class="text-muted">Последняя аренда</div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика по станциям (ORM annotate) -->
+<h2 class="h4 mb-3">По станциям</h2>
+
+<div class="table-responsive mb-5">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Станция</th>
+                <th scope="col">Вместимость</th>
+                <th scope="col">Всего аренд</th>
+                <th scope="col">Активных</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for station in station_stats %}
+                <tr>
+                    <td>{{ station.name }}</td>
+                    <td>{{ station.capacity }}</td>
+                    <td>{{ station.rentals_total }}</td>
+                    <td>{{ station.rentals_active }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" class="text-muted">
+                        Станции пока не добавлены.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Статистика по клиентам (ORM annotate) -->
+<h2 class="h4 mb-3">По клиентам</h2>
+
+<div class="table-responsive mb-5">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Клиент</th>
+                <th scope="col">Email</th>
+                <th scope="col">Всего аренд</th>
+                <th scope="col">Активных</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in user_stats %}
+                <tr>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.rentals_total }}</td>
+                    <td>{{ user.rentals_active }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" class="text-muted">
+                        Клиенты пока не добавлены.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Статистика по типам (ORM values + annotate) -->
+<h2 class="h4 mb-3">По типам велосипедов</h2>
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Тип</th>
+                <th scope="col">Всего велосипедов</th>
+                <th scope="col">Свободных</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in type_stats %}
+                <tr>
+                    <td>{{ item.type_label }}</td>
+                    <td>{{ item.total }}</td>
+                    <td>{{ item.available }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3" class="text-muted">
+                        Велосипеды пока не добавлены.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

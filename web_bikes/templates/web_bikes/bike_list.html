@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Велосипеды — Bikely{% endblock %}
@@ -11,50 +10,102 @@
     </span>
 </div>
 
-<!-- Форма поиска велосипедов -->
-<form method="get" action="{% url 'web_bikes:list' %}" class="mb-4">
-    <div class="input-group">
+<!-- Форма поиска, фильтрации и сортировки велосипедов -->
+<form method="get" action="{% url 'web_bikes:list' %}" class="row g-3 mb-4">
+    <div class="col-md-4">
+        <label class="form-label" for="search">Поиск</label>
         <input
             type="text"
+            id="search"
             name="search"
             class="form-control"
-            placeholder="Введите название модели велосипеда"
+            placeholder="Модель или тип велосипеда"
             value="{{ search }}"
         >
-        <button class="btn btn-primary" type="submit">
-            Найти
-        </button>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label" for="type">Тип</label>
+        <select id="type" name="type" class="form-select">
+            <option value="">Все типы</option>
+            {% for value, label in bike_types %}
+                <option value="{{ value }}"
+                        {% if selected_type == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label" for="availability">Доступность</label>
+        <select id="availability" name="availability" class="form-select">
+            {% for value, label in availability_choices %}
+                <option value="{{ value }}"
+                        {% if availability == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <label class="form-label" for="sort">Сортировка</label>
+        <select id="sort" name="sort" class="form-select">
+            <option value="model" {% if sort == "model" %}selected{% endif %}>
+                Модель (А–Я)
+            </option>
+            <option value="-model" {% if sort == "-model" %}selected{% endif %}>
+                Модель (Я–А)
+            </option>
+            <option value="type" {% if sort == "type" %}selected{% endif %}>
+                Тип
+            </option>
+            <option value="-type" {% if sort == "-type" %}selected{% endif %}>
+                Тип (обратно)
+            </option>
+            <option value="availability"
+                    {% if sort == "availability" %}selected{% endif %}>
+                Доступность
+            </option>
+        </select>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Применить</button>
         <a href="{% url 'web_bikes:list' %}" class="btn btn-outline-secondary">
             Сбросить
         </a>
     </div>
 </form>
 
-{% if search %}
+{% if search or selected_type or availability != "all" %}
     <p class="text-muted">
-        Результаты поиска по запросу: <strong>{{ search }}</strong>
+        {% if search %}
+            Поиск: <strong>{{ search }}</strong>.
+        {% endif %}
+        {% if selected_type %}
+            Тип: <strong>{{ selected_type_label }}</strong>.
+        {% endif %}
+        {% if availability == "available" %}
+            Показаны только свободные велосипеды.
+        {% elif availability == "rented" %}
+            Показаны только велосипеды на руках у клиентов.
+        {% endif %}
     </p>
 {% endif %}
 
 {% if bikes %}
     <div class="row g-4">
         {% for bike in bikes %}
-            <div class="col-md-6 col-lg-4">
-                {% include "web_bikes/includes/bike_card.html" with bike=bike %}
-            </div>
-        {% empty %}
-            <p>Пока велосипеды не добавлены.</p>
+            {% include "web_bikes/includes/bike_card.html" with bike=bike %}
         {% endfor %}
     </div>
 {% else %}
-    {% if search %}
-        <div class="alert alert-warning">
-            По запросу «{{ search }}» велосипеды не найдены.
-        </div>
-    {% else %}
-        <div class="alert alert-info">
-            Сейчас велосипеды отсутствуют.
-        </div>
-    {% endif %}
+    <div class="alert alert-warning">
+        По заданным условиям велосипеды не найдены.
+        <a href="{% url 'web_bikes:list' %}">Сбросить фильтры</a>.
+    </div>
 {% endif %}
 {% endblock %}
+

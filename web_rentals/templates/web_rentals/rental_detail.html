@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Аренда №{{ rental.id }} — Bikely{% endblock %}
@@ -19,7 +18,16 @@
         <div class="detail-info">
             <div>
                 <span>Велосипед</span>
-                <strong>{{ rental.bike.model }}</strong>
+                <strong>
+                    <a href="{% url 'web_bikes:detail' rental.bike.id %}">
+                        {{ rental.bike.model }}
+                    </a>
+                </strong>
+            </div>
+
+            <div>
+                <span>Тип велосипеда</span>
+                <strong>{{ rental.bike.get_type_display }}</strong>
             </div>
 
             <div>
@@ -28,19 +36,50 @@
             </div>
 
             <div>
+                <span>Email клиента</span>
+                <strong>{{ rental.user.email }}</strong>
+            </div>
+
+            <div>
                 <span>Станция</span>
                 <strong>{{ rental.station.name }}</strong>
             </div>
 
             <div>
+                <span>Вместимость станции</span>
+                <strong>{{ rental.station.capacity }}</strong>
+            </div>
+
+            <div>
                 <span>Время начала</span>
-                <strong>{{ rental.start_time }}</strong>
+                <strong>{{ rental.start_time|date:"d.m.Y H:i" }}</strong>
+            </div>
+
+            <div>
+                <span>Всего аренд клиента</span>
+                <strong>{{ user_rentals_count }}</strong>
             </div>
         </div>
 
         <div class="mt-4">
             {% include "web_rentals/includes/rental_status.html" with rental=rental %}
         </div>
+
+        {% if rental.is_active %}
+            <form method="post"
+                  action="{% url 'web_rentals:complete' rental.id %}"
+                  class="mt-4">
+                {% csrf_token %}
+                <button class="btn btn-primary" type="submit">
+                    Завершить аренду
+                </button>
+            </form>
+        {% else %}
+            <p class="mt-4 text-muted mb-0">
+                Аренда завершена, велосипед возвращён в парк.
+            </p>
+        {% endif %}
     </article>
 </div>
 {% endblock %}
+

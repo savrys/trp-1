@@ -1,0 +1,80 @@
+[
+{
+  "model": "web_bikes.station",
+  "pk": 1,
+  "fields": {
+    "name": "Станция Парк Культуры",
+    "capacity": 15
+  }
+},
+{
+  "model": "web_bikes.station",
+  "pk": 2,
+  "fields": {
+    "name": "Станция Университет",
+    "capacity": 10
+  }
+},
+{
+  "model": "web_bikes.station",
+  "pk": 3,
+  "fields": {
+    "name": "",
+    "capacity": 10
+  }
+},
+{
+  "model": "web_bikes.bike",
+  "pk": 1,
+  "fields": {
+    "model": "Format 1411",
+    "type": "Mountain",
+    "is_available": true
+  }
+},
+{
+  "model": "web_bikes.bike",
+  "pk": 2,
+  "fields": {
+    "model": "Shulz Trekker",
+    "type": "Touring",
+    "is_available": true
+  }
+},
+{
+  "model": "web_bikes.bike",
+  "pk": 3,
+  "fields": {
+    "model": "Giant Escape",
+    "type": "Urban",
+    "is_available": false
+  }
+},
+{
+  "model": "web_rentals.user",
+  "pk": 1,
+  "fields": {
+    "name": "Иван Иванов",
+    "email": "ivan@mail.ru"
+  }
+},
+{
+  "model": "web_rentals.user",
+  "pk": 2,
+  "fields": {
+    "name": "Мария Сидорова",
+    "email": "maria@yandex.ru"
+  }
+},
+{
+  "model": "web_rentals.rental",
+  "pk": 1,
+  "fields": {
+    "bike": 3,
+    "user": 1,
+    "station": 1,
+    "start_time": "2026-09-26T11:00:00Z",
+    "is_completed": false
+  }
+}
+]

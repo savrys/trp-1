@@ -1,5 +1,5 @@
 
-<div class="col-md-6">
+<div class="col-md-6 col-lg-4">
     <article class="data-card h-100">
         <div class="d-flex justify-content-between align-items-start gap-2">
             <span class="bike-icon">🚲</span>
@@ -19,7 +19,7 @@
             <h3>{{ bike.model|default:"Модель не указана" }}</h3>
 
             <p class="text-secondary mb-3">
-                {{ bike.type|default:"Тип не указан" }}
+                {{ bike.get_type_display|default:"Тип не указан" }}
             </p>
 
             <a class="text-link" href="{% url 'web_bikes:detail' bike.id %}">

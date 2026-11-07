@@ -1,69 +1,73 @@
-
 {% extends "base.html" %}
 
-{% block title %}
-    {% if bike %}
-        {{ bike.model }} — Bikely
-    {% else %}
-        Велосипед не найден — Bikely
-    {% endif %}
-{% endblock %}
+{% block title %}{{ bike.model }} — Bikely{% endblock %}
 
 {% block content %}
-{% if bike %}
-    <div class="detail-wrap">
-        <a class="back-link" href="{% url 'web_bikes:list' %}">
-            ← Вернуться к каталогу
-        </a>
+<div class="detail-wrap">
+    <a class="back-link" href="{% url 'web_bikes:list' %}">
+        ← Вернуться к каталогу
+    </a>
 
-        <article class="detail-card">
-            <div class="detail-bike-icon">🚲</div>
+    <article class="detail-card">
+        <div class="detail-bike-icon">🚲</div>
 
-            <span class="eyebrow">
-                ВЕЛОСИПЕД №{{ bike.id }}
-            </span>
+        <span class="eyebrow">
+            ВЕЛОСИПЕД №{{ bike.id }}
+        </span>
 
-            <h1>{{ bike.model }}</h1>
+        <h1>{{ bike.model }}</h1>
 
-            <p class="detail-type">
-                {{ bike.type|default:"Тип не указан" }}
-            </p>
-
-            <div class="detail-info">
-                <div>
-                    <span>Идентификатор</span>
-                    <strong>{{ bike.id }}</strong>
-                </div>
-
-                <div>
-                    <span>Текущий статус</span>
-
-                    {% if bike.is_available %}
-                        <strong class="text-success">
-                            Свободен для выдачи
-                        </strong>
-                    {% else %}
-                        <strong class="text-danger">
-                            Находится на руках у клиента
-                        </strong>
-                    {% endif %}
-                </div>
-            </div>
-        </article>
-    </div>
-{% else %}
-    <div class="not-found">
-        <div class="not-found-icon">?</div>
-
-        <h1>Велосипед не найден</h1>
-
-        <p>
-            Велосипеда с указанным идентификатором не существует.
+        <p class="detail-type">
+            {{ bike.get_type_display }}
         </p>
 
-        <a href="{% url 'web_bikes:list' %}" class="btn btn-bikely">
-            Вернуться к каталогу
-        </a>
-    </div>
-{% endif %}
+        <div class="detail-info">
+            <div>
+                <span>Идентификатор</span>
+                <strong>{{ bike.id }}</strong>
+            </div>
+
+            <div>
+                <span>Текущий статус</span>
+
+                {% if bike.is_available %}
+                    <strong class="text-success">
+                        Свободен для выдачи
+                    </strong>
+                {% else %}
+                    <strong class="text-danger">
+                        Находится на руках у клиента
+                    </strong>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h2 class="h5">История аренды</h2>
+
+            {% if rental_history %}
+                <ul class="list-group">
+                    {% for rental in rental_history %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <a href="{% url 'web_rentals:detail' rental.id %}">
+                                    Аренда №{{ rental.id }}
+                                </a>
+                                — {{ rental.user.name }},
+                                {{ rental.start_time|date:"d.m.Y H:i" }}
+                            </span>
+
+                            {% include "web_rentals/includes/rental_status.html" with rental=rental %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">
+                    Этот велосипед ещё ни разу не арендовали.
+                </p>
+            {% endif %}
+        </div>
+    </article>
+</div>
 {% endblock %}
+
