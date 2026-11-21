@@ -1,7 +1,8 @@
 """Тесты моделей и представлений приложения web_bikes."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.test import TestCase
 from django.urls import reverse
@@ -85,15 +86,96 @@ class BikeModelTests(TestCase):
 
     def test_lookup_by_related_field(self):
         rented_bikes = Bike.objects.filter(
-            rentals__is_completed=False
+            rentals__status=Rental.Status.ACTIVE
         ).distinct()
         self.assertEqual(list(rented_bikes), [self.mountain])
+
+    def test_available_on_considers_date_and_rental_status(self):
+        rental_day = timezone.localdate(self.rental.start_time)
+        Bike.objects.filter(pk=self.mountain.pk).update(is_available=True)
+
+        self.assertNotIn(
+            self.mountain,
+            Bike.objects.available_on(rental_day),
+        )
+        self.assertIn(
+            self.mountain,
+            Bike.objects.available_on(rental_day - timedelta(days=1)),
+        )
+
+        Rental.objects.filter(pk=self.rental.pk).update(
+            status=Rental.Status.COMPLETED,
+        )
+        self.assertIn(
+            self.mountain,
+            Bike.objects.available_on(rental_day),
+        )
 
     def test_annotate_counts_related_rentals(self):
         station = Station.objects.annotate(
             rentals_count=Count("rentals"),
         ).get(pk=self.station.pk)
         self.assertEqual(station.rentals_count, 1)
+
+    def test_slug_is_generated_from_model_and_pk(self):
+        self.assertEqual(self.urban.slug, f"aist-city-{self.urban.pk}")
+        self.assertTrue(self.urban.slug.endswith(str(self.urban.pk)))
+
+    def test_slug_is_unique_for_same_model(self):
+        duplicate = Bike.objects.create(
+            model="Aist City",
+            type=Bike.Type.URBAN,
+        )
+
+        self.assertNotEqual(duplicate.slug, self.urban.slug)
+        self.assertEqual(duplicate.slug, f"aist-city-{duplicate.pk}")
+
+    def test_slug_is_not_recreated_on_repeated_save(self):
+        original_slug = self.urban.slug
+
+        self.urban.is_available = False
+        self.urban.save()
+        self.urban.refresh_from_db()
+
+        self.assertEqual(self.urban.slug, original_slug)
+
+    def test_get_absolute_url_uses_slug(self):
+        self.assertEqual(
+            self.urban.get_absolute_url(),
+            f"/bikes/{self.urban.slug}/",
+        )
+
+    def test_station_is_large_is_calculated_by_database(self):
+        small = Station.objects.get(pk=self.station.pk)
+        large = Station.objects.create(name="Большая станция", capacity=20)
+
+        self.assertFalse(small.is_large)
+        self.assertTrue(large.is_large)
+
+    def test_station_is_large_updates_after_capacity_change(self):
+        self.station.capacity = 25
+        self.station.save()
+        self.station.refresh_from_db()
+
+        self.assertTrue(self.station.is_large)
+
+    def test_station_queryset_annotates_rental_statistics(self):
+        station = Station.objects.with_rental_stats().get(
+            pk=self.station.pk,
+        )
+
+        self.assertEqual(station.rentals_total, 1)
+        self.assertEqual(station.rentals_active, 1)
+
+    def test_bike_queryset_annotates_rental_statistics(self):
+        bikes = {
+            bike.pk: bike
+            for bike in Bike.objects.with_rental_stats()
+        }
+
+        self.assertEqual(bikes[self.mountain.pk].rentals_total, 1)
+        self.assertEqual(bikes[self.mountain.pk].rentals_active, 1)
+        self.assertEqual(bikes[self.urban.pk].rentals_total, 0)
 
 
 class BikeViewTests(TestCase):
@@ -198,7 +280,7 @@ class BikeViewTests(TestCase):
 
     def test_detail_view_shows_bike_and_rental_history(self):
         response = self.client.get(
-            reverse("web_bikes:detail", args=[self.retro.pk])
+            reverse("web_bikes:detail", args=[self.retro.slug])
         )
 
         self.assertEqual(response.status_code, 200)
@@ -207,8 +289,62 @@ class BikeViewTests(TestCase):
 
     def test_detail_view_returns_404_for_unknown_bike(self):
         response = self.client.get(
-            reverse("web_bikes:detail", args=[9999])
+            reverse("web_bikes:detail", args=["unknown-bike"])
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_list_view_links_to_detail_by_slug(self):
+        response = self.client.get(reverse("web_bikes:list"))
+
+        self.assertContains(response, self.city.get_absolute_url())
+        self.assertContains(response, self.city.slug)
+
+
+class BikeAdminTests(TestCase):
+    """Проверка настроек административной панели велосипедов и станций."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.station = Station.objects.create(name="Админ-станция", capacity=20)
+        cls.bike = Bike.objects.create(
+            model="Admin Bike",
+            type=Bike.Type.URBAN,
+        )
+        cls.admin_user = get_user_model().objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="admin-password",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin_user)
+
+    def test_bike_changelist_shows_slug_and_rental_stats(self):
+        response = self.client.get(
+            reverse("admin:web_bikes_bike_changelist")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.bike.slug)
+        self.assertContains(response, "Всего аренд")
+        self.assertContains(response, "Активных аренд")
+
+    def test_station_changelist_shows_generated_field(self):
+        response = self.client.get(
+            reverse("admin:web_bikes_station_changelist")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Крупная станция")
+        self.assertContains(response, "Админ-станция")
+
+    def test_bike_change_form_has_public_page_link(self):
+        response = self.client.get(
+            reverse("admin:web_bikes_bike_change", args=[self.bike.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["original"], self.bike)
+        self.assertContains(response, self.bike.get_absolute_url())
 

@@ -4,7 +4,8 @@
   "pk": 1,
   "fields": {
     "name": "Станция Парк Культуры",
-    "capacity": 15
+    "capacity": 15,
+    "is_large": false
   }
 },
 {
@@ -12,15 +13,8 @@
   "pk": 2,
   "fields": {
     "name": "Станция Университет",
-    "capacity": 10
-  }
-},
-{
-  "model": "web_bikes.station",
-  "pk": 3,
-  "fields": {
-    "name": "",
-    "capacity": 10
+    "capacity": 10,
+    "is_large": false
   }
 },
 {
@@ -29,7 +23,8 @@
   "fields": {
     "model": "Format 1411",
     "type": "Mountain",
-    "is_available": true
+    "is_available": true,
+    "slug": "format-1411-1"
   }
 },
 {
@@ -38,7 +33,8 @@
   "fields": {
     "model": "Shulz Trekker",
     "type": "Touring",
-    "is_available": true
+    "is_available": true,
+    "slug": "shulz-trekker-2"
   }
 },
 {
@@ -47,7 +43,8 @@
   "fields": {
     "model": "Giant Escape",
     "type": "Urban",
-    "is_available": false
+    "is_available": false,
+    "slug": "giant-escape-3"
   }
 },
 {
@@ -74,7 +71,7 @@
     "user": 1,
     "station": 1,
     "start_time": "2026-09-26T11:00:00Z",
-    "is_completed": false
+    "status": "active"
   }
 }
 ]

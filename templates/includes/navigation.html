@@ -11,8 +11,12 @@
                 width="40"
                 height="40"
             >
-            <span>Bikely</span>
+            <span>{{ site_name|default:"Bikely" }}</span>
         </a>
+
+        <span class="navbar-text d-none d-lg-inline ms-3">
+            Велосипедов в парке: {{ bikes_count }}
+        </span>
 
         <button
             class="navbar-toggler"

@@ -1,7 +1,9 @@
-"""Перенос данных из SQLite-базы ПР7 в базу Django ORM (ПР9).
+"""Перенос данных из SQLite-базы ПР7 в базу Django ORM.
 
 Скрипт читает таблицы bikes, users, stations, rentals из
 data/bikely.sqlite и сохраняет их через ORM, сохраняя исходные id.
+Логическое поле is_completed преобразуется в статус аренды, а slug
+велосипедов создаётся автоматически моделью Bike.
 
 Запуск (после python manage.py migrate):
     python db/import_sqlite_to_orm.py
@@ -103,7 +105,11 @@ def import_data():
                     "user_id": row["user_id"],
                     "station_id": row["station_id"],
                     "start_time": parse_start_time(row["start_time"]),
-                    "is_completed": bool(row["is_completed"]),
+                    "status": (
+                        Rental.Status.COMPLETED
+                        if row["is_completed"]
+                        else Rental.Status.ACTIVE
+                    ),
                 },
             )
 

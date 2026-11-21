@@ -13,24 +13,31 @@
 
 <!-- Сводные показатели (ORM aggregate) -->
 <div class="row g-3 mb-5">
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center">
             <div class="fs-3 fw-bold">{{ summary.total }}</div>
             <div class="text-muted">Всего аренд</div>
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center">
             <div class="fs-3 fw-bold text-warning">{{ summary.active }}</div>
             <div class="text-muted">Активных аренд</div>
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="feature-card p-3 h-100 text-center">
             <div class="fs-3 fw-bold text-success">{{ summary.completed }}</div>
             <div class="text-muted">Завершённых аренд</div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <div class="feature-card p-3 h-100 text-center">
+            <div class="fs-3 fw-bold text-danger">{{ summary.cancelled }}</div>
+            <div class="text-muted">Отменённых аренд</div>
         </div>
     </div>
 

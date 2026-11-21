@@ -1,3 +1,5 @@
+import sys
+from importlib.util import find_spec
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,6 +10,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver']
 
+# Django Debug Toolbar подключается только при наличии пакета.
+HAS_DEBUG_TOOLBAR = find_spec('debug_toolbar') is not None
+
+# Во время тестов панель отладки не нужна и мешает проверкам Django.
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -16,10 +24,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Подключаем наши созданные веб-приложения:
-    'web_main',
-    'web_bikes',
-    'web_rentals',
+    'web_main.apps.WebMainConfig',
+    'web_bikes.apps.WebBikesConfig',
+    'web_rentals.apps.WebRentalsConfig',
 ]
+
+if DEBUG and HAS_DEBUG_TOOLBAR and not RUNNING_TESTS:
+    INSTALLED_APPS.append('debug_toolbar')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -32,6 +43,10 @@ MIDDLEWARE = [
     # Показывает кастомную страницу 404 и при DEBUG = True.
     'bikely.middleware.Custom404Middleware',
 ]
+
+if DEBUG and HAS_DEBUG_TOOLBAR and not RUNNING_TESTS:
+    # Панель должна обрабатывать запрос сразу после SecurityMiddleware.
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'bikely.urls'
 
@@ -46,10 +61,20 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Общие сведения о сервисе для всех шаблонов.
+                'web_main.context_processors.bikely_context',
             ],
         },
     },
 ]
+
+# Панель отладки доступна только локальным адресам разработчика.
+INTERNAL_IPS = ['127.0.0.1', 'localhost']
+
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': 'bikely.debug.show_toolbar',
+}
+
 
 WSGI_APPLICATION = 'bikely.wsgi.application'
 

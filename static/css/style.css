@@ -86,6 +86,11 @@ a {
     color: #666666;
 }
 
+.status-cancelled {
+    background-color: #fbe0e0;
+    color: #a12a2a;
+}
+
 .text-link,
 .back-link {
     color: #1677c8;

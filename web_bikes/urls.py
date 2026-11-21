@@ -6,6 +6,6 @@ app_name = "web_bikes"
 
 urlpatterns = [
     path("", views.bikes_list_view, name="list"),
-    path("<int:bike_id>/", views.bike_detail_view, name="detail"),
+    path("<slug:slug>/", views.bike_detail_view, name="detail"),
 ]
 

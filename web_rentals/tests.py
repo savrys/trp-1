@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
@@ -50,10 +51,15 @@ class RentalModelTests(TestCase):
         self.assertIn("Мария", text)
         self.assertIn("ВДНХ", text)
 
-    def test_is_active_property(self):
+    def test_status_defaults_to_active(self):
+        self.assertEqual(self.rental.status, Rental.Status.ACTIVE)
         self.assertTrue(self.rental.is_active)
 
-        self.rental.is_completed = True
+    def test_is_active_property_depends_on_status(self):
+        self.rental.status = Rental.Status.COMPLETED
+        self.assertFalse(self.rental.is_active)
+
+        self.rental.status = Rental.Status.CANCELLED
         self.assertFalse(self.rental.is_active)
 
     def test_complete_returns_bike_to_park(self):
@@ -62,13 +68,78 @@ class RentalModelTests(TestCase):
         self.rental.refresh_from_db()
         self.bike.refresh_from_db()
 
-        self.assertTrue(self.rental.is_completed)
+        self.assertEqual(self.rental.status, Rental.Status.COMPLETED)
+        self.assertFalse(self.rental.is_active)
         self.assertTrue(self.bike.is_available)
+
+    def test_cancel_returns_bike_to_park(self):
+        self.bike.is_available = False
+        self.bike.save(update_fields=["is_available"])
+
+        self.assertTrue(self.rental.cancel())
+
+        self.rental.refresh_from_db()
+        self.bike.refresh_from_db()
+
+        self.assertEqual(self.rental.status, Rental.Status.CANCELLED)
+        self.assertTrue(self.bike.is_available)
+
+    def test_complete_and_cancel_keep_database_record(self):
+        rental_pk = self.rental.pk
+
+        self.rental.complete()
+
+        self.assertTrue(Rental.objects.filter(pk=rental_pk).exists())
 
     def test_complete_is_idempotent(self):
         self.rental.complete()
 
         self.assertFalse(self.rental.complete())
+        self.assertFalse(self.rental.cancel())
+
+    def test_status_queryset_methods_filter_records(self):
+        completed = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=aware("2026-09-27 13:00"),
+            status=Rental.Status.COMPLETED,
+        )
+        cancelled = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=aware("2026-09-28 13:00"),
+            status=Rental.Status.CANCELLED,
+        )
+
+        self.assertEqual(list(Rental.objects.active()), [self.rental])
+        self.assertEqual(list(Rental.objects.completed()), [completed])
+        self.assertEqual(list(Rental.objects.cancelled()), [cancelled])
+
+    def test_statistics_counts_each_status(self):
+        Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=aware("2026-09-27 13:00"),
+            status=Rental.Status.COMPLETED,
+        )
+        Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=aware("2026-09-28 13:00"),
+            status=Rental.Status.CANCELLED,
+        )
+
+        stats = Rental.objects.statistics()
+
+        self.assertEqual(stats["total"], 3)
+        self.assertEqual(stats["active"], 1)
+        self.assertEqual(stats["completed"], 1)
+        self.assertEqual(stats["cancelled"], 1)
+        self.assertEqual(stats["last_start_time"], aware("2026-09-28 13:00"))
 
     def test_delete_is_protected_by_rental(self):
         with self.assertRaises(ProtectedError):
@@ -85,7 +156,10 @@ class RentalModelTests(TestCase):
     def test_queryset_aggregation(self):
         stats = Rental.objects.aggregate(
             total=Count("id"),
-            active=Count("id", filter=Q(is_completed=False)),
+            active=Count(
+                "id",
+                filter=Q(status=Rental.Status.ACTIVE),
+            ),
         )
 
         self.assertEqual(stats["total"], 1)
@@ -150,10 +224,19 @@ class RentalViewTests(TestCase):
                 start_time=aware(
                     f"2026-09-{index + 1:02d} 10:00"
                 ),
-                is_completed=index % 2 == 1,
+                status=cls.rental_status(index),
             )
             for index in range(7)
         ]
+
+    @staticmethod
+    def rental_status(index):
+        """Распределить тестовые аренды по всем трём статусам."""
+        if index == 2:
+            return Rental.Status.CANCELLED
+        if index % 2 == 1:
+            return Rental.Status.COMPLETED
+        return Rental.Status.ACTIVE
 
     def test_list_view_paginates_rentals(self):
         first_page = self.client.get(reverse("web_rentals:list"))
@@ -174,8 +257,9 @@ class RentalViewTests(TestCase):
         response = self.client.get(reverse("web_rentals:list"))
 
         self.assertEqual(response.context["stats"]["total"], 7)
-        self.assertEqual(response.context["stats"]["active"], 4)
+        self.assertEqual(response.context["stats"]["active"], 3)
         self.assertEqual(response.context["stats"]["completed"], 3)
+        self.assertEqual(response.context["stats"]["cancelled"], 1)
 
     def test_list_view_default_ordering_is_newest_first(self):
         response = self.client.get(reverse("web_rentals:list"))
@@ -194,14 +278,19 @@ class RentalViewTests(TestCase):
             reverse("web_rentals:list"),
             {"status": "completed"},
         )
+        cancelled = self.client.get(
+            reverse("web_rentals:list"),
+            {"status": "cancelled"},
+        )
 
         self.assertTrue(
             all(
-                not rental.is_completed
+                rental.status == Rental.Status.ACTIVE
                 for rental in active.context["rentals"]
             )
         )
         self.assertEqual(len(completed.context["rentals"]), 3)
+        self.assertEqual(len(cancelled.context["rentals"]), 1)
 
     def test_list_view_filters_by_related_objects(self):
         by_bike = self.client.get(
@@ -340,7 +429,7 @@ class RentalViewTests(TestCase):
         rental.refresh_from_db()
         bike.refresh_from_db()
 
-        self.assertTrue(rental.is_completed)
+        self.assertEqual(rental.status, Rental.Status.COMPLETED)
         self.assertTrue(bike.is_available)
 
     def test_complete_view_requires_post_method(self):
@@ -357,8 +446,9 @@ class RentalViewTests(TestCase):
 
         summary = response.context["summary"]
         self.assertEqual(summary["total"], 7)
-        self.assertEqual(summary["active"], 4)
+        self.assertEqual(summary["active"], 3)
         self.assertEqual(summary["completed"], 3)
+        self.assertEqual(summary["cancelled"], 1)
         self.assertEqual(summary["average_capacity"], 15)
         self.assertEqual(
             summary["last_start_time"],
@@ -370,7 +460,7 @@ class RentalViewTests(TestCase):
             for station in response.context["station_stats"]
         }
         self.assertEqual(station_stats["Центр"].rentals_total, 4)
-        self.assertEqual(station_stats["Центр"].rentals_active, 4)
+        self.assertEqual(station_stats["Центр"].rentals_active, 3)
         self.assertEqual(station_stats["Парк"].rentals_total, 3)
         self.assertEqual(station_stats["Парк"].rentals_active, 0)
 
@@ -388,4 +478,91 @@ class RentalViewTests(TestCase):
         self.assertEqual(type_stats["Городской"]["total"], 2)
         self.assertEqual(type_stats["Городской"]["available"], 2)
         self.assertEqual(type_stats["Горный"]["total"], 1)
+
+
+class RentalAdminTests(TestCase):
+    """Проверка административных действий и статистики аренд."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.station = Station.objects.create(name="Админ-станция", capacity=10)
+        cls.bike = Bike.objects.create(
+            model="Admin Bike",
+            type=Bike.Type.URBAN,
+            is_available=False,
+        )
+        cls.rental = Rental.objects.create(
+            bike=cls.bike,
+            user=User.objects.create(
+                name="Админ Клиент",
+                email="client@example.com",
+            ),
+            station=cls.station,
+            start_time=aware("2026-09-10 09:00"),
+        )
+        cls.admin_user = get_user_model().objects.create_superuser(
+            username="rental-admin",
+            email="rental-admin@example.com",
+            password="admin-password",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin_user)
+
+    def test_rental_changelist_shows_status_and_bike_type(self):
+        response = self.client.get(
+            reverse("admin:web_rentals_rental_changelist")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Активна")
+        self.assertContains(response, "Городской")
+
+    def test_user_changelist_shows_rental_statistics(self):
+        response = self.client.get(
+            reverse("admin:web_rentals_user_changelist")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Всего аренд")
+        self.assertContains(response, "Активных аренд")
+        self.assertContains(response, "Админ Клиент")
+
+    def test_complete_action_updates_status_and_bike(self):
+        response = self.client.post(
+            reverse("admin:web_rentals_rental_changelist"),
+            {
+                "action": "complete_rentals",
+                "_selected_action": [str(self.rental.pk)],
+                "select_across": "0",
+                "index": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.rental.refresh_from_db()
+        self.bike.refresh_from_db()
+
+        self.assertEqual(self.rental.status, Rental.Status.COMPLETED)
+        self.assertTrue(self.bike.is_available)
+
+    def test_cancel_action_updates_status_and_bike(self):
+        response = self.client.post(
+            reverse("admin:web_rentals_rental_changelist"),
+            {
+                "action": "cancel_rentals",
+                "_selected_action": [str(self.rental.pk)],
+                "select_across": "0",
+                "index": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.rental.refresh_from_db()
+        self.bike.refresh_from_db()
+
+        self.assertEqual(self.rental.status, Rental.Status.CANCELLED)
+        self.assertTrue(self.bike.is_available)
 

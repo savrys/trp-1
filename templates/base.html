@@ -28,7 +28,9 @@
     <footer class="site-footer text-center py-4 mt-5">
         <div class="container">
             <p class="mb-0">
-                © {% now "Y" %} Bikely — сервис аренды велосипедов
+                © {% now "Y" %} {{ site_name|default:"Bikely" }} —
+                сервис аренды велосипедов. Велосипедов в парке:
+                {{ bikes_count }}.
             </p>
         </div>
     </footer>

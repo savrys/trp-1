@@ -19,7 +19,7 @@
             <div>
                 <span>Велосипед</span>
                 <strong>
-                    <a href="{% url 'web_bikes:detail' rental.bike.id %}">
+                    <a href="{{ rental.bike.get_absolute_url }}">
                         {{ rental.bike.model }}
                     </a>
                 </strong>
@@ -76,7 +76,8 @@
             </form>
         {% else %}
             <p class="mt-4 text-muted mb-0">
-                Аренда завершена, велосипед возвращён в парк.
+                Статус аренды: {{ rental.get_status_display }}.
+                Велосипед возвращён в парк.
             </p>
         {% endif %}
     </article>

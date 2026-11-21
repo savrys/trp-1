@@ -8,5 +8,9 @@
         <p>
             Вместимость: {{ station.capacity }} мест
         </p>
+
+        {% if station.is_large %}
+            <span class="status status-active">Крупная станция</span>
+        {% endif %}
     </div>
 </article>

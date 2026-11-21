@@ -1,10 +1,14 @@
 
-{% if rental.is_completed %}
+{% if rental.status == rental.Status.ACTIVE %}
+    <span class="status status-muted">
+        Аренда активна
+    </span>
+{% elif rental.status == rental.Status.COMPLETED %}
     <span class="status status-active">
         Аренда завершена
     </span>
-{% else %}
-    <span class="status status-muted">
-        Аренда активна
+{% elif rental.status == rental.Status.CANCELLED %}
+    <span class="status status-cancelled">
+        Аренда отменена
     </span>
 {% endif %}

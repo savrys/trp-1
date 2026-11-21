@@ -2,5 +2,6 @@ from django.apps import AppConfig
 
 
 class WebMainConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'web_main'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "web_main"
+    verbose_name = "Главная страница"

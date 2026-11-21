@@ -25,6 +25,7 @@ STATUS_CHOICES = (
     ("all", "Все аренды"),
     ("active", "Активные"),
     ("completed", "Завершённые"),
+    ("cancelled", "Отменённые"),
 )
 
 
@@ -38,14 +39,16 @@ def _to_int(value):
 
 def rentals_list_view(request):
     """Список аренд: фильтры, поиск, сортировка и пагинация."""
-    rentals = Rental.objects.select_related("bike", "user", "station")
+    rentals = Rental.objects.with_related()
 
-    # Фильтр по статусу аренды.
+    # Фильтр по статусу аренды (менеджер скрывает условие фильтрации).
     status = request.GET.get("status", "all")
     if status == "active":
-        rentals = rentals.filter(is_completed=False)
+        rentals = rentals.active()
     elif status == "completed":
-        rentals = rentals.filter(is_completed=True)
+        rentals = rentals.completed()
+    elif status == "cancelled":
+        rentals = rentals.cancelled()
     else:
         status = "all"
 
@@ -82,11 +85,7 @@ def rentals_list_view(request):
     page_obj = paginator.get_page(request.GET.get("page"))
 
     # Агрегация: общее количество аренд по статусам.
-    stats = Rental.objects.aggregate(
-        total=Count("id"),
-        active=Count("id", filter=Q(is_completed=False)),
-        completed=Count("id", filter=Q(is_completed=True)),
-    )
+    stats = Rental.objects.statistics()
 
     context = {
         "page_obj": page_obj,
@@ -109,7 +108,7 @@ def rentals_list_view(request):
 def rental_detail_view(request, rental_id):
     """Подробная информация об аренде."""
     rental = get_object_or_404(
-        Rental.objects.select_related("bike", "user", "station"),
+        Rental.objects.with_related(),
         pk=rental_id,
     )
     user_rentals_count = rental.user.rentals.count()
@@ -132,21 +131,15 @@ def rental_complete_view(request, rental_id):
 
 def rental_statistics_view(request):
     """Статистика по станциям, клиентам и типам велосипедов."""
-    station_stats = Station.objects.annotate(
-        rentals_total=Count("rentals"),
-        rentals_active=Count(
-            "rentals",
-            filter=Q(rentals__is_completed=False),
-        ),
-    ).order_by("-rentals_total", "name")
+    station_stats = Station.objects.with_rental_stats().order_by(
+        "-rentals_total",
+        "name",
+    )
 
-    user_stats = User.objects.annotate(
-        rentals_total=Count("rentals"),
-        rentals_active=Count(
-            "rentals",
-            filter=Q(rentals__is_completed=False),
-        ),
-    ).order_by("-rentals_total", "name")
+    user_stats = User.objects.with_rental_stats().order_by(
+        "-rentals_total",
+        "name",
+    )
 
     # values() + annotate(): сводка по типам велосипедов.
     type_labels = dict(Bike.Type.choices)
@@ -161,13 +154,8 @@ def rental_statistics_view(request):
     for item in type_stats:
         item["type_label"] = type_labels.get(item["type"], item["type"])
 
-    # aggregate(): сводные показатели по всей базе.
-    summary = Rental.objects.aggregate(
-        total=Count("id"),
-        active=Count("id", filter=Q(is_completed=False)),
-        completed=Count("id", filter=Q(is_completed=True)),
-        last_start_time=Max("start_time"),
-    )
+    # aggregate(): сводные показатели по всей базе одним запросом.
+    summary = Rental.objects.statistics()
     summary["average_capacity"] = Station.objects.aggregate(
         value=Avg("capacity")
     )["value"]

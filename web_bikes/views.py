@@ -1,6 +1,6 @@
 """Представления каталога велосипедов на основе Django ORM."""
 
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 
 from .models import Bike, Station
@@ -30,7 +30,7 @@ def bikes_list_view(request):
     availability = request.GET.get("availability", "all")
     sort = request.GET.get("sort", DEFAULT_SORT)
 
-    bikes = Bike.objects.all()
+    bikes = Bike.objects.with_rental_stats()
 
     # Поиск сразу по нескольким полям через Q-объекты.
     if search:
@@ -49,7 +49,7 @@ def bikes_list_view(request):
 
     # Фильтрация по доступности: filter() и exclude().
     if availability == "available":
-        bikes = bikes.filter(is_available=True)
+        bikes = bikes.available()
     elif availability == "rented":
         bikes = bikes.exclude(is_available=True)
     else:
@@ -59,9 +59,7 @@ def bikes_list_view(request):
         sort = DEFAULT_SORT
     bikes = bikes.order_by(*SORT_FIELDS[sort])
 
-    stations = Station.objects.annotate(
-        rentals_count=Count("rentals"),
-    )
+    stations = Station.objects.with_rental_stats()
 
     context = {
         "bikes": bikes,
@@ -77,14 +75,15 @@ def bikes_list_view(request):
     return render(request, "web_bikes/bike_list.html", context)
 
 
-def bike_detail_view(request, bike_id):
+def bike_detail_view(request, slug):
     """Подробная информация о велосипеде и история его аренды."""
-    bike = get_object_or_404(Bike, pk=bike_id)
-    rental_history = bike.rentals.select_related("user", "station")
+    bike = get_object_or_404(Bike.objects.with_rental_stats(), slug=slug)
+    rental_history = (
+        bike.rentals.with_related().order_by("-start_time", "pk")
+    )
 
     return render(
         request,
         "web_bikes/bike_detail.html",
         {"bike": bike, "rental_history": rental_history},
     )
-
