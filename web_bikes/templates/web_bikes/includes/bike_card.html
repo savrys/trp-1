@@ -2,7 +2,13 @@
 <div class="col-md-6 col-lg-4">
     <article class="data-card h-100">
         <div class="d-flex justify-content-between align-items-start gap-2">
-            <span class="bike-icon">🚲</span>
+            {% if bike.image %}
+                <img src="{{ bike.image.url }}"
+                     alt="Фото {{ bike.model }}"
+                     class="bike-photo bike-card-photo">
+            {% else %}
+                <span class="bike-icon">🚲</span>
+            {% endif %}
 
             {% if bike.is_available %}
                 <span class="status status-active">Доступен</span>

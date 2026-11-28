@@ -8,6 +8,10 @@
     <h1 class="mb-0">Аренды велосипедов</h1>
 
     <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary btn-sm"
+           href="{% url 'web_rentals:create' %}">
+            Оформить аренду
+        </a>
         <span class="badge bg-primary">Всего: {{ stats.total }}</span>
         <span class="badge bg-warning text-dark">
             Активных: {{ stats.active }}
@@ -25,93 +29,39 @@
 
 <!-- Форма фильтрации, поиска и сортировки аренд -->
 <form method="get" action="{% url 'web_rentals:list' %}" class="row g-3 mb-4">
+    {% if form.non_field_errors %}
+        <div class="col-12">
+            <div class="alert alert-danger mb-0">
+                {{ form.non_field_errors }}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="col-md-4">
-        <label class="form-label" for="search">Поиск</label>
-        <input
-            type="text"
-            id="search"
-            name="search"
-            class="form-control"
-            placeholder="Модель, клиент, email или станция"
-            value="{{ search }}"
-        >
+        {% include "includes/form_field.html" with field=form.search %}
     </div>
 
     <div class="col-md-2">
-        <label class="form-label" for="status">Статус</label>
-        <select id="status" name="status" class="form-select">
-            {% for value, label in statuses %}
-                <option value="{{ value }}"
-                        {% if status == value %}selected{% endif %}>
-                    {{ label }}
-                </option>
-            {% endfor %}
-        </select>
+        {% include "includes/form_field.html" with field=form.status %}
     </div>
 
     <div class="col-md-2">
-        <label class="form-label" for="bike">Велосипед</label>
-        <select id="bike" name="bike" class="form-select">
-            <option value="">Все велосипеды</option>
-            {% for bike in bikes %}
-                <option value="{{ bike.id }}"
-                        {% if selected_bike == bike.id %}selected{% endif %}>
-                    {{ bike.model }}
-                </option>
-            {% endfor %}
-        </select>
+        {% include "includes/form_field.html" with field=form.bike %}
     </div>
 
     <div class="col-md-2">
-        <label class="form-label" for="user">Клиент</label>
-        <select id="user" name="user" class="form-select">
-            <option value="">Все клиенты</option>
-            {% for user in users %}
-                <option value="{{ user.id }}"
-                        {% if selected_user == user.id %}selected{% endif %}>
-                    {{ user.name }}
-                </option>
-            {% endfor %}
-        </select>
+        {% include "includes/form_field.html" with field=form.user %}
     </div>
 
     <div class="col-md-2">
-        <label class="form-label" for="station">Станция</label>
-        <select id="station" name="station" class="form-select">
-            <option value="">Все станции</option>
-            {% for station in stations %}
-                <option value="{{ station.id }}"
-                        {% if selected_station == station.id %}selected{% endif %}>
-                    {{ station.name }}
-                </option>
-            {% endfor %}
-        </select>
+        {% include "includes/form_field.html" with field=form.station %}
     </div>
 
     <div class="col-md-3">
-        <label class="form-label" for="sort">Сортировка</label>
-        <select id="sort" name="sort" class="form-select">
-            <option value="date" {% if sort == "date" %}selected{% endif %}>
-                Дате (сначала новые)
-            </option>
-            <option value="date_asc"
-                    {% if sort == "date_asc" %}selected{% endif %}>
-                Дате (сначала старые)
-            </option>
-            <option value="bike" {% if sort == "bike" %}selected{% endif %}>
-                Велосипеду
-            </option>
-            <option value="user" {% if sort == "user" %}selected{% endif %}>
-                Клиенту
-            </option>
-            <option value="station"
-                    {% if sort == "station" %}selected{% endif %}>
-                Станции
-            </option>
-        </select>
+        {% include "includes/form_field.html" with field=form.sort %}
     </div>
 
-    <div class="col-md-9 d-flex align-items-end gap-2">
+    <div class="col-md-9 d-flex align-items-end gap-2 mb-3">
         <button class="btn btn-primary" type="submit">Применить</button>
         <a href="{% url 'web_rentals:list' %}"
            class="btn btn-outline-secondary">

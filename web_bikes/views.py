@@ -1,11 +1,10 @@
 """Представления каталога велосипедов на основе Django ORM."""
 
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import DEFAULT_SORT, BikeFilterForm, BikeForm
 from .models import Bike, Station
-
-DEFAULT_SORT = "model"
 
 # Сортировка по нескольким полям: кортеж передаётся в order_by().
 SORT_FIELDS = {
@@ -16,19 +15,21 @@ SORT_FIELDS = {
     "availability": ("-is_available", "model"),
 }
 
-AVAILABILITY_CHOICES = (
-    ("all", "Все велосипеды"),
-    ("available", "Свободные"),
-    ("rented", "На руках у клиентов"),
-)
-
 
 def bikes_list_view(request):
     """Список велосипедов с поиском, фильтрацией и сортировкой."""
-    search = request.GET.get("search", "").strip()
-    selected_type = request.GET.get("type", "").strip()
-    availability = request.GET.get("availability", "all")
-    sort = request.GET.get("sort", DEFAULT_SORT)
+    form = BikeFilterForm(request.GET or None)
+
+    if form.is_bound and form.is_valid():
+        search = form.cleaned_data["search"].strip()
+        selected_type = form.cleaned_data["type"]
+        availability = form.cleaned_data["availability"] or "all"
+        sort = form.cleaned_data["sort"] or DEFAULT_SORT
+    else:
+        search = ""
+        selected_type = ""
+        availability = "all"
+        sort = DEFAULT_SORT
 
     bikes = Bike.objects.with_rental_stats()
 
@@ -64,13 +65,12 @@ def bikes_list_view(request):
     context = {
         "bikes": bikes,
         "stations": stations,
+        "form": form,
         "search": search,
         "selected_type": selected_type,
         "selected_type_label": selected_type_label,
         "availability": availability,
         "sort": sort,
-        "bike_types": Bike.Type.choices,
-        "availability_choices": AVAILABILITY_CHOICES,
     }
     return render(request, "web_bikes/bike_list.html", context)
 
@@ -86,4 +86,42 @@ def bike_detail_view(request, slug):
         request,
         "web_bikes/bike_detail.html",
         {"bike": bike, "rental_history": rental_history},
+    )
+
+
+def bike_create_view(request):
+    """Добавить велосипед в парк через форму с загрузкой изображения."""
+    if request.method == "POST":
+        form = BikeForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            bike = form.save()
+            return redirect("web_bikes:detail", slug=bike.slug)
+    else:
+        form = BikeForm()
+
+    return render(
+        request,
+        "web_bikes/bike_form.html",
+        {"form": form, "is_edit": False},
+    )
+
+
+def bike_update_view(request, slug):
+    """Отредактировать велосипед и при необходимости заменить изображение."""
+    bike = get_object_or_404(Bike, slug=slug)
+
+    if request.method == "POST":
+        form = BikeForm(request.POST, request.FILES, instance=bike)
+
+        if form.is_valid():
+            bike = form.save()
+            return redirect("web_bikes:detail", slug=bike.slug)
+    else:
+        form = BikeForm(instance=bike)
+
+    return render(
+        request,
+        "web_bikes/bike_form.html",
+        {"form": form, "bike": bike, "is_edit": True},
     )

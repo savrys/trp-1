@@ -1,6 +1,6 @@
 """Тесты моделей и представлений приложения web_rentals."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from web_bikes.models import Bike, Station
 
+from .forms import RentalForm
 from .models import Rental, User
 
 
@@ -478,6 +479,265 @@ class RentalViewTests(TestCase):
         self.assertEqual(type_stats["Городской"]["total"], 2)
         self.assertEqual(type_stats["Городской"]["available"], 2)
         self.assertEqual(type_stats["Горный"]["total"], 1)
+
+
+class RentalFormTests(TestCase):
+    """Проверка валидации формы аренды."""
+
+    def setUp(self):
+        self.station = Station.objects.create(name="Форма", capacity=10)
+        self.user = User.objects.create(
+            name="Клиент формы",
+            email="form@example.com",
+        )
+        self.bike = Bike.objects.create(
+            model="Form Bike",
+            type=Bike.Type.URBAN,
+        )
+
+    def future_start(self):
+        return (
+            timezone.localtime() + timedelta(days=2)
+        ).strftime("%Y-%m-%dT%H:%M")
+
+    def form_data(self, **overrides):
+        data = {
+            "bike": self.bike.pk,
+            "user": self.user.pk,
+            "station": self.station.pk,
+            "start_time": self.future_start(),
+        }
+        data.update(overrides)
+        return data
+
+    def test_valid_form_creates_active_rental(self):
+        form = RentalForm(data=self.form_data())
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+        rental = form.save()
+
+        self.assertEqual(rental.status, Rental.Status.ACTIVE)
+
+    def test_start_time_in_past_is_rejected(self):
+        past = (
+            timezone.localtime() - timedelta(days=1)
+        ).strftime("%Y-%m-%dT%H:%M")
+        form = RentalForm(data=self.form_data(start_time=past))
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("start_time", form.errors)
+
+    def test_station_capacity_is_validated(self):
+        station = Station.objects.create(name="Маленькая", capacity=1)
+        Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=station,
+            start_time=timezone.localtime() + timedelta(days=1),
+        )
+        another_bike = Bike.objects.create(
+            model="Another Bike",
+            type=Bike.Type.MOUNTAIN,
+        )
+
+        form = RentalForm(
+            data=self.form_data(
+                bike=another_bike.pk,
+                station=station.pk,
+            )
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("station", form.errors)
+
+
+class RentalFormViewTests(TestCase):
+    """Проверка представлений создания, редактирования и отмены аренды."""
+
+    def setUp(self):
+        self.station = Station.objects.create(
+            name="Станция формы",
+            capacity=10,
+        )
+        self.user = User.objects.create(
+            name="Тестовый клиент",
+            email="rental-form@example.com",
+        )
+        self.bike = Bike.objects.create(
+            model="Form City",
+            type=Bike.Type.URBAN,
+        )
+        self.another_bike = Bike.objects.create(
+            model="Form Trail",
+            type=Bike.Type.MOUNTAIN,
+        )
+        self.start_time = timezone.localtime() + timedelta(days=2)
+
+    def form_data(self, **overrides):
+        data = {
+            "bike": self.bike.pk,
+            "user": self.user.pk,
+            "station": self.station.pk,
+            "start_time": self.start_time.strftime("%Y-%m-%dT%H:%M"),
+        }
+        data.update(overrides)
+        return data
+
+    def test_create_view_marks_bike_unavailable(self):
+        response = self.client.post(
+            reverse("web_rentals:create"),
+            self.form_data(),
+        )
+
+        rental = Rental.objects.get(bike=self.bike)
+
+        self.assertRedirects(
+            response,
+            reverse("web_rentals:detail", args=[rental.pk]),
+        )
+        self.assertEqual(rental.status, Rental.Status.ACTIVE)
+
+        self.bike.refresh_from_db()
+        self.assertFalse(self.bike.is_available)
+
+    def test_create_view_rejects_busy_bike(self):
+        Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+        self.bike.is_available = False
+        self.bike.save(update_fields=["is_available"])
+
+        response = self.client.post(
+            reverse("web_rentals:create"),
+            self.form_data(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "уже находится в активной аренде")
+        self.assertEqual(Rental.objects.count(), 1)
+
+    def test_update_view_excludes_current_rental_from_conflict_check(self):
+        rental = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+        self.bike.is_available = False
+        self.bike.save(update_fields=["is_available"])
+
+        response = self.client.post(
+            reverse("web_rentals:edit", args=[rental.pk]),
+            self.form_data(),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("web_rentals:detail", args=[rental.pk]),
+        )
+        self.assertEqual(Rental.objects.count(), 1)
+
+        rental.refresh_from_db()
+        self.assertEqual(rental.bike_id, self.bike.pk)
+
+    def test_update_view_switches_bike_and_availability(self):
+        rental = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+        self.bike.is_available = False
+        self.bike.save(update_fields=["is_available"])
+
+        response = self.client.post(
+            reverse("web_rentals:edit", args=[rental.pk]),
+            self.form_data(bike=self.another_bike.pk),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("web_rentals:detail", args=[rental.pk]),
+        )
+
+        rental.refresh_from_db()
+        self.bike.refresh_from_db()
+        self.another_bike.refresh_from_db()
+
+        self.assertEqual(rental.bike_id, self.another_bike.pk)
+        self.assertTrue(self.bike.is_available)
+        self.assertFalse(self.another_bike.is_available)
+
+    def test_update_view_rejects_bike_from_another_active_rental(self):
+        rental = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+        self.another_bike.is_available = False
+        self.another_bike.save(update_fields=["is_available"])
+        Rental.objects.create(
+            bike=self.another_bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+
+        response = self.client.post(
+            reverse("web_rentals:edit", args=[rental.pk]),
+            self.form_data(bike=self.another_bike.pk),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "уже находится в активной аренде")
+
+        rental.refresh_from_db()
+        self.assertEqual(rental.bike_id, self.bike.pk)
+
+    def test_cancel_view_returns_bike_to_park(self):
+        rental = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+        self.bike.is_available = False
+        self.bike.save(update_fields=["is_available"])
+
+        response = self.client.post(
+            reverse("web_rentals:cancel", args=[rental.pk]),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("web_rentals:detail", args=[rental.pk]),
+        )
+
+        rental.refresh_from_db()
+        self.bike.refresh_from_db()
+
+        self.assertEqual(rental.status, Rental.Status.CANCELLED)
+        self.assertTrue(self.bike.is_available)
+
+    def test_cancel_view_requires_post(self):
+        rental = Rental.objects.create(
+            bike=self.bike,
+            user=self.user,
+            station=self.station,
+            start_time=self.start_time,
+        )
+
+        response = self.client.get(
+            reverse("web_rentals:cancel", args=[rental.pk]),
+        )
+
+        self.assertEqual(response.status_code, 405)
+
 
 
 class RentalAdminTests(TestCase):

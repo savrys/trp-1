@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}
+        Редактирование аренды №{{ rental.id }} — Bikely
+    {% else %}
+        Новая аренда — Bikely
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <a class="back-link"
+           href="{% if is_edit %}{% url 'web_rentals:detail' rental.id %}{% else %}{% url 'web_rentals:list' %}{% endif %}">
+            ← {% if is_edit %}Вернуться к аренде{% else %}Вернуться к списку аренд{% endif %}
+        </a>
+
+        <div class="data-card">
+            <span class="eyebrow">
+                {% if is_edit %}РЕДАКТИРОВАНИЕ АРЕНДЫ{% else %}НОВАЯ АРЕНДА{% endif %}
+            </span>
+
+            <h1 class="mb-3">
+                {% if is_edit %}
+                    Аренда №{{ rental.id }}
+                {% else %}
+                    Оформление аренды
+                {% endif %}
+            </h1>
+
+            <p class="text-muted">
+                Выберите свободный велосипед, клиента и станцию выдачи.
+                Новая аренда получает статус «Активна», а велосипед
+                становится недоступным до завершения или отмены.
+            </p>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                {% include "includes/form_field.html" with field=form.bike %}
+                {% include "includes/form_field.html" with field=form.user %}
+                {% include "includes/form_field.html" with field=form.station %}
+                {% include "includes/form_field.html" with field=form.start_time %}
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary" type="submit">
+                        {% if is_edit %}Сохранить изменения{% else %}Оформить аренду{% endif %}
+                    </button>
+
+                    <a class="btn btn-outline-secondary"
+                       href="{% if is_edit %}{% url 'web_rentals:detail' rental.id %}{% else %}{% url 'web_rentals:list' %}{% endif %}">
+                        Отмена
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

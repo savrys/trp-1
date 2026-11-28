@@ -1,15 +1,18 @@
 """Тесты моделей и представлений приложения web_bikes."""
 
+import tempfile
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Count
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from web_rentals.models import Rental, User
 
+from .forms import BikeForm
 from .models import Bike, Station
 
 
@@ -299,6 +302,125 @@ class BikeViewTests(TestCase):
 
         self.assertContains(response, self.city.get_absolute_url())
         self.assertContains(response, self.city.slug)
+
+
+PNG_IMAGE = (
+    b"\x89PNG\r\n\x1a\n"
+    b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+)
+
+
+class BikeFormTests(TestCase):
+    """Проверка формы создания велосипеда и загрузки изображения."""
+
+    def setUp(self):
+        self.media_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.media_dir.cleanup)
+
+        self.media_override = override_settings(
+            MEDIA_ROOT=self.media_dir.name
+        )
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+
+    def form_data(self, **overrides):
+        data = {
+            "model": "Form Bike",
+            "type": Bike.Type.URBAN,
+            "is_available": "on",
+        }
+        data.update(overrides)
+        return data
+
+    def test_form_saves_valid_image(self):
+        upload = SimpleUploadedFile(
+            "photo.png",
+            PNG_IMAGE,
+            content_type="image/png",
+        )
+        form = BikeForm(
+            data=self.form_data(),
+            files={"image": upload},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+        bike = form.save()
+
+        self.assertEqual(bike.image.name, "bikes/photo.png")
+        self.assertTrue(bike.image.storage.exists(bike.image.name))
+
+    def test_form_rejects_unsupported_extension(self):
+        upload = SimpleUploadedFile(
+            "photo.txt",
+            b"not an image",
+            content_type="text/plain",
+        )
+        form = BikeForm(
+            data=self.form_data(),
+            files={"image": upload},
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("image", form.errors)
+
+    def test_form_rejects_file_without_image_signature(self):
+        upload = SimpleUploadedFile(
+            "photo.png",
+            b"plain text instead of png",
+            content_type="image/png",
+        )
+        form = BikeForm(
+            data=self.form_data(),
+            files={"image": upload},
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("image", form.errors)
+
+    def test_create_view_redirects_to_new_bike(self):
+        upload = SimpleUploadedFile(
+            "photo.png",
+            PNG_IMAGE,
+            content_type="image/png",
+        )
+        data = self.form_data(model="Новый велосипед")
+        data["image"] = upload
+
+        response = self.client.post(
+            reverse("web_bikes:create"),
+            data=data,
+        )
+
+        bike = Bike.objects.get(model="Новый велосипед")
+
+        self.assertRedirects(
+            response,
+            reverse("web_bikes:detail", args=[bike.slug]),
+        )
+        self.assertTrue(bike.image)
+
+    def test_update_view_changes_bike_and_keeps_slug(self):
+        bike = Bike.objects.create(
+            model="Старое название",
+            type=Bike.Type.URBAN,
+        )
+        old_slug = bike.slug
+
+        response = self.client.post(
+            reverse("web_bikes:edit", args=[old_slug]),
+            self.form_data(model="Новое название"),
+        )
+
+        bike.refresh_from_db()
+
+        self.assertRedirects(
+            response,
+            reverse("web_bikes:detail", args=[bike.slug]),
+        )
+        self.assertEqual(bike.model, "Новое название")
+        self.assertEqual(bike.slug, old_slug)
 
 
 class BikeAdminTests(TestCase):

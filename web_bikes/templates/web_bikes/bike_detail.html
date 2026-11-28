@@ -9,7 +9,13 @@
     </a>
 
     <article class="detail-card">
-        <div class="detail-bike-icon">🚲</div>
+        {% if bike.image %}
+            <img src="{{ bike.image.url }}"
+                 alt="Фото {{ bike.model }}"
+                 class="bike-photo detail-photo">
+        {% else %}
+            <div class="detail-bike-icon">🚲</div>
+        {% endif %}
 
         <span class="eyebrow">
             ВЕЛОСИПЕД №{{ bike.id }}
@@ -45,6 +51,13 @@
                     </strong>
                 {% endif %}
             </div>
+        </div>
+
+        <div class="mt-3">
+            <a class="btn btn-outline-primary"
+               href="{% url 'web_bikes:edit' bike.slug %}">
+                Редактировать велосипед
+            </a>
         </div>
 
         <div class="mt-4">

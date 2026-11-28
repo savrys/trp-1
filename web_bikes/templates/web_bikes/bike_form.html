@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}
+        Редактирование {{ bike.model }} — Bikely
+    {% else %}
+        Новый велосипед — Bikely
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <a class="back-link"
+           href="{% if is_edit %}{% url 'web_bikes:detail' bike.slug %}{% else %}{% url 'web_bikes:list' %}{% endif %}">
+            ← {% if is_edit %}Вернуться к велосипеду{% else %}Вернуться к каталогу{% endif %}
+        </a>
+
+        <div class="data-card">
+            <span class="eyebrow">
+                {% if is_edit %}РЕДАКТИРОВАНИЕ ВЕЛОСИПЕДА{% else %}НОВЫЙ ВЕЛОСИПЕД{% endif %}
+            </span>
+
+            <h1 class="mb-3">
+                {% if is_edit %}
+                    {{ bike.model }}
+                {% else %}
+                    Добавление велосипеда
+                {% endif %}
+            </h1>
+
+            <p class="text-muted">
+                Поля, отмеченные звёздочкой, обязательны. Изображение
+                можно загрузить в формате JPEG, PNG или WebP.
+            </p>
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                {% include "includes/form_field.html" with field=form.model %}
+                {% include "includes/form_field.html" with field=form.type %}
+                {% include "includes/form_field.html" with field=form.is_available %}
+                {% include "includes/form_field.html" with field=form.image %}
+
+                {% if is_edit and bike.image %}
+                    <div class="mb-3">
+                        <span class="form-label d-block">
+                            Текущее изображение
+                        </span>
+                        <img src="{{ bike.image.url }}"
+                             alt="Фото {{ bike.model }}"
+                             class="bike-photo">
+                    </div>
+                {% endif %}
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary" type="submit">
+                        {% if is_edit %}Сохранить изменения{% else %}Добавить велосипед{% endif %}
+                    </button>
+
+                    <a class="btn btn-outline-secondary"
+                       href="{% if is_edit %}{% url 'web_bikes:detail' bike.slug %}{% else %}{% url 'web_bikes:list' %}{% endif %}">
+                        Отмена
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

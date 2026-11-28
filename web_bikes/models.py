@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.utils.text import slugify
 from unidecode import unidecode
 
+from .validators import validate_bike_image
+
 # Вместимость, начиная с которой станция считается крупной.
 LARGE_STATION_CAPACITY = 20
 
@@ -137,6 +139,17 @@ class Bike(models.Model):
         default=True,
         verbose_name="Доступен для аренды",
         help_text="Снимите флажок, когда велосипед выдан клиенту.",
+    )
+
+    image = models.FileField(
+        upload_to="bikes/",
+        blank=True,
+        validators=[validate_bike_image],
+        verbose_name="Изображение",
+        help_text=(
+            "Фотография велосипеда в формате JPEG, PNG или WebP "
+            "размером до 5 МБ."
+        ),
     )
 
     slug = models.SlugField(

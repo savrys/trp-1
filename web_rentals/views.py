@@ -1,16 +1,23 @@
 """Представления аренды на основе Django ORM."""
 
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Max, Q
+from django.db import transaction
+from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from web_bikes.models import Bike, Station
 
+from .forms import (
+    DEFAULT_SORT,
+    STATUS_CHOICES,
+    RentalFilterForm,
+    RentalForm,
+)
 from .models import Rental, User
 
 PAGE_SIZE = 5
-DEFAULT_SORT = "date"
 
 # Сортировка по нескольким полям: кортеж передаётся в order_by().
 SORT_FIELDS = {
@@ -21,28 +28,35 @@ SORT_FIELDS = {
     "station": ("station__name", "pk"),
 }
 
-STATUS_CHOICES = (
-    ("all", "Все аренды"),
-    ("active", "Активные"),
-    ("completed", "Завершённые"),
-    ("cancelled", "Отменённые"),
-)
-
-
-def _to_int(value):
-    """Привести GET-параметр к int (или вернуть None)."""
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
 
 def rentals_list_view(request):
     """Список аренд: фильтры, поиск, сортировка и пагинация."""
+    form = RentalFilterForm(request.GET or None)
+
+    if form.is_bound and form.is_valid():
+        status = form.cleaned_data["status"] or "all"
+        search = form.cleaned_data["search"].strip()
+        selected_bike_obj = form.cleaned_data["bike"]
+        selected_user_obj = form.cleaned_data["user"]
+        selected_station_obj = form.cleaned_data["station"]
+        sort = form.cleaned_data["sort"] or DEFAULT_SORT
+    else:
+        status = "all"
+        search = ""
+        selected_bike_obj = None
+        selected_user_obj = None
+        selected_station_obj = None
+        sort = DEFAULT_SORT
+
+    selected_bike = selected_bike_obj.pk if selected_bike_obj else None
+    selected_user = selected_user_obj.pk if selected_user_obj else None
+    selected_station = (
+        selected_station_obj.pk if selected_station_obj else None
+    )
+
     rentals = Rental.objects.with_related()
 
     # Фильтр по статусу аренды (менеджер скрывает условие фильтрации).
-    status = request.GET.get("status", "all")
     if status == "active":
         rentals = rentals.active()
     elif status == "completed":
@@ -53,20 +67,16 @@ def rentals_list_view(request):
         status = "all"
 
     # Фильтры по связанным объектам (внешним ключам).
-    selected_bike = _to_int(request.GET.get("bike"))
     if selected_bike is not None:
         rentals = rentals.filter(bike_id=selected_bike)
 
-    selected_user = _to_int(request.GET.get("user"))
     if selected_user is not None:
         rentals = rentals.filter(user_id=selected_user)
 
-    selected_station = _to_int(request.GET.get("station"))
     if selected_station is not None:
         rentals = rentals.filter(station_id=selected_station)
 
     # Поиск по полям связанных моделей через Q-объекты.
-    search = request.GET.get("search", "").strip()
     if search:
         rentals = rentals.filter(
             Q(bike__model__icontains=search)
@@ -76,7 +86,6 @@ def rentals_list_view(request):
         )
 
     # Сортировка по нескольким полям.
-    sort = request.GET.get("sort", DEFAULT_SORT)
     if sort not in SORT_FIELDS:
         sort = DEFAULT_SORT
     rentals = rentals.order_by(*SORT_FIELDS[sort])
@@ -91,6 +100,7 @@ def rentals_list_view(request):
         "page_obj": page_obj,
         "rentals": page_obj.object_list,
         "stats": stats,
+        "form": form,
         "status": status,
         "search": search,
         "sort": sort,
@@ -118,6 +128,121 @@ def rental_detail_view(request, rental_id):
         "web_rentals/rental_detail.html",
         {"rental": rental, "user_rentals_count": user_rentals_count},
     )
+
+
+def rental_create_view(request):
+    """Оформить новую аренду через Django-форму."""
+    if request.method == "POST":
+        form = RentalForm(request.POST)
+
+        if form.is_valid():
+            bike = form.cleaned_data["bike"]
+
+            # Проверка доступности велосипеда на момент создания аренды.
+            bike_is_busy = Rental.objects.active().filter(bike=bike).exists()
+
+            if not bike.is_available or bike_is_busy:
+                form.add_error(
+                    "bike",
+                    "Этот велосипед уже находится в активной аренде.",
+                )
+            else:
+                rental = form.save(commit=False)
+                rental.status = Rental.Status.ACTIVE
+
+                with transaction.atomic():
+                    rental.save()
+                    Bike.objects.filter(pk=bike.pk).update(
+                        is_available=False
+                    )
+
+                return redirect(
+                    "web_rentals:detail",
+                    rental_id=rental.pk,
+                )
+    else:
+        form = RentalForm(
+            initial={"start_time": timezone.localtime()},
+        )
+
+    return render(
+        request,
+        "web_rentals/rental_form.html",
+        {"form": form, "is_edit": False},
+    )
+
+
+def rental_update_view(request, rental_id):
+    """Отредактировать активную аренду.
+
+    При проверке занятости текущая аренда исключается из QuerySet,
+    поэтому сохранение без смены велосипеда не считается конфликтом.
+    """
+    rental = get_object_or_404(
+        Rental.objects.active(),
+        pk=rental_id,
+    )
+    old_bike_id = rental.bike_id
+
+    if request.method == "POST":
+        form = RentalForm(request.POST, instance=rental)
+
+        if form.is_valid():
+            new_bike = form.cleaned_data["bike"]
+            bike_changed = new_bike.pk != old_bike_id
+
+            # Исключаем редактируемую аренду из проверки занятости.
+            bike_is_busy = (
+                Rental.objects.active()
+                .filter(bike=new_bike)
+                .exclude(pk=rental.pk)
+                .exists()
+            )
+
+            if bike_is_busy or (bike_changed and not new_bike.is_available):
+                form.add_error(
+                    "bike",
+                    "Выбранный велосипед уже находится в активной аренде.",
+                )
+            else:
+                with transaction.atomic():
+                    updated = form.save(commit=False)
+                    updated.status = Rental.Status.ACTIVE
+                    updated.save()
+
+                    Bike.objects.filter(pk=new_bike.pk).update(
+                        is_available=False
+                    )
+
+                    if bike_changed:
+                        Bike.objects.filter(pk=old_bike_id).update(
+                            is_available=True
+                        )
+
+                return redirect(
+                    "web_rentals:detail",
+                    rental_id=rental.pk,
+                )
+    else:
+        form = RentalForm(instance=rental)
+
+    return render(
+        request,
+        "web_rentals/rental_form.html",
+        {"form": form, "rental": rental, "is_edit": True},
+    )
+
+
+@require_POST
+def rental_cancel_view(request, rental_id):
+    """Отменить активную аренду и вернуть велосипед в парк."""
+    rental = get_object_or_404(
+        Rental.objects.active(),
+        pk=rental_id,
+    )
+    rental.cancel()
+
+    return redirect("web_rentals:detail", rental_id=rental.pk)
 
 
 @require_POST

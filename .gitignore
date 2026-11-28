@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Виртуальное окружение
+venv/
+.venv/
+
+# Локальная база данных и загруженные файлы
+db.sqlite3
+media/
+
+# Настройки редактора
+.vscode/

@@ -136,9 +136,16 @@ class BikeAdmin(admin.ModelAdmin):
         (
             "Характеристики",
             {
-                "fields": ("id", "model", "type", "is_available"),
+                "fields": (
+                    "id",
+                    "model",
+                    "type",
+                    "is_available",
+                    "image",
+                ),
                 "description": (
-                    "Доступность можно переключать прямо в списке велосипедов."
+                    "Доступность можно переключать прямо в списке велосипедов. "
+                    "Изображение загружается в формате JPEG, PNG или WebP."
                 ),
             },
         ),

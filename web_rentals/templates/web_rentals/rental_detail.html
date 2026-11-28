@@ -66,14 +66,28 @@
         </div>
 
         {% if rental.is_active %}
-            <form method="post"
-                  action="{% url 'web_rentals:complete' rental.id %}"
-                  class="mt-4">
-                {% csrf_token %}
-                <button class="btn btn-primary" type="submit">
-                    Завершить аренду
-                </button>
-            </form>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <a class="btn btn-outline-primary"
+                   href="{% url 'web_rentals:edit' rental.id %}">
+                    Редактировать аренду
+                </a>
+
+                <form method="post"
+                      action="{% url 'web_rentals:complete' rental.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-primary" type="submit">
+                        Завершить аренду
+                    </button>
+                </form>
+
+                <form method="post"
+                      action="{% url 'web_rentals:cancel' rental.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-danger" type="submit">
+                        Отменить аренду
+                    </button>
+                </form>
+            </div>
         {% else %}
             <p class="mt-4 text-muted mb-0">
                 Статус аренды: {{ rental.get_status_display }}.

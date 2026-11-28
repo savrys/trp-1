@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
@@ -8,6 +9,13 @@ urlpatterns = [
     path("bikes/", include("web_bikes.urls")),
     path("rentals/", include("web_rentals.urls")),
 ]
+
+# В режиме разработки Django отдаёт загруженные изображения сам.
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT,
+    )
 
 # Маршруты Django Debug Toolbar подключаются только при локальной разработке.
 if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
